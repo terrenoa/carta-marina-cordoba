@@ -1,7 +1,8 @@
 # carta-marina-cordoba
 Proyecto para la extracción, procesamiento y análisis de datos de las Cartas Marinas de Córdoba (2015–2023)
 #2015
-# Diferencias respecto del repositorio original
+#2015
+## Diferencias respecto del repositorio original
 
 Este proyecto busca reproducir el funcionamiento del parser original de la Carta Marina, realizando únicamente las adaptaciones necesarias para ejecutarlo en un entorno moderno (Google Colab / Python 3) y corregir incompatibilidades detectadas durante el procesamiento.
 
