@@ -3,7 +3,63 @@
 Proyecto para la extracción, procesamiento y análisis de datos de las Cartas Marinas de Córdoba (2015–2023).
 
 ---
+# Parser 2017
 
+## Repositorio de referencia
+
+Este parser se desarrolló tomando como base el trabajo realizado por **Open Data Córdoba**, disponible en el siguiente repositorio:
+
+https://github.com/OpenDataCordoba/elecciones2015/
+
+En particular, se utilizó como referencia el parser correspondiente a la extracción de la **Carta Marina 2017** incluido en dicho proyecto.
+
+## Objetivo de esta adaptación
+
+Luego de la adaptación realizada sobre el parser de 2015, se buscó comprobar si dichas mejoras permitían reutilizar el mismo algoritmo sobre la Carta Marina 2017 sin introducir modificaciones específicas.
+
+## Diferencias respecto del parser 2015
+
+### 1. Generalización del encabezado de la elección
+
+#### Original
+
+El parser identificaba el encabezado mediante una condición específica para el año 2015:
+
+```python
+if "ELECCIONES 2015" in linea:
+```
+
+#### Adaptación
+
+Se reemplazó por:
+
+```python
+if "ELECCIONES 20" in linea:
+```
+
+#### Justificación
+
+Esta modificación permite reutilizar el mismo parser para todas las Cartas Marinas comprendidas entre 2015 y 2023 sin depender del año específico indicado en el encabezado.
+
+---
+
+## Validación
+
+El resultado obtenido coincide exactamente con el resumen oficial de la Carta Marina 2017:
+
+| Concepto | Carta Marina | Parser |
+|----------|-------------:|-------:|
+| Establecimientos | 1.211 | 1.211 |
+| Mesas | 8.649 | 8.649 |
+| Electores | 2.884.358 | 2.884.358 |
+
+Durante el procesamiento se detectaron cinco discontinuidades en la numeración de mesas. Al igual que en 2015, estas corresponden a registros que aparecen fuera de secuencia dentro del documento y no implican pérdida de información.
+
+## Conclusión
+
+Las adaptaciones incorporadas durante el desarrollo del parser para la Carta Marina 2015 resultaron suficientes para procesar correctamente la Carta Marina 2017.
+
+La única modificación necesaria consistió en generalizar la detección del encabezado correspondiente al año de la elección, confirmando que el algoritmo puede reutilizarse entre distintas Cartas Marinas con cambios mínimos.
 # Parser 2015
 
 ## Repositorio de referencia
