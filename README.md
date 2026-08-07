@@ -2,16 +2,168 @@
 
 Proyecto para la extracción, procesamiento y análisis de datos de las Cartas Marinas de Córdoba (2015–2023).
 
+## Origen del proyecto
+
+Este proyecto toma como punto de partida los trabajos desarrollados por **Open Data Córdoba**, disponibles en los siguientes repositorios:
+
+- **Elecciones Provinciales 2015**
+  https://github.com/OpenDataCordoba/elecciones2015/
+
+- **Carta Marina 2017**
+  https://github.com/avdata99/carta-marina-2017/
+
+A partir de dichos proyectos se desarrolló una nueva implementación de los parsers con los siguientes objetivos:
+
+- Adaptarlos a Python 3.
+- Ejecutarlos en Google Colab.
+- Documentar todas las modificaciones realizadas respecto de los parsers originales.
+- Unificar el modelo de datos generado para todas las Cartas Marinas.
+- Preservar la mayor cantidad posible de información durante la extracción.
+- Facilitar la incorporación de nuevas Cartas Marinas en futuras elecciones.
+
+---
+# Parser 2019
+
+
+## Objetivo de esta adaptación
+
+Luego de la adaptación realizada sobre el parser de 2017, se buscó adaptar el algoritmo al nuevo formato incorporado por la Carta Marina 2019, preservando en la mayor medida posible la lógica original y el modelo de datos desarrollado para las versiones anteriores.
+
+
+## Diferencias respecto del parser 2017
+
+### 1. Cambio de formato de la Carta Marina
+
+A diferencia de las Cartas Marinas 2015 y 2017, el documento correspondiente a 2019 presenta modificaciones importantes en su estructura.
+
+Entre los principales cambios se encuentran:
+
+- Nuevo encabezado de la elección.
+- Nuevo formato para la identificación de los circuitos.
+- Cambios en el resumen de cada circuito.
+- Reorganización visual de las columnas del listado de establecimientos.
+
+Estas modificaciones obligan a adaptar distintas reglas del parser, aunque se mantiene la misma lógica general de extracción.
+
+
+
+### 2. Detección del encabezado de la elección
+
+#### Formato anterior
+
+Las Cartas Marinas anteriores utilizaban encabezados como:
+
+```text
+ELECCIONES 2015
+ELECCIONES 2017
+```
+
+#### Adaptación
+
+La detección del encabezado se generalizó utilizando:
+
+```python
+if "ELECCIONES 20" in linea:
+```
+
+#### Justificación
+
+Esta condición permite reutilizar el mismo parser para todas las Cartas Marinas comprendidas entre 2015 y 2023, independientemente del año específico indicado en el encabezado.
+
+
+### 3. Detección de circuitos
+
+#### Formato anterior
+
+En 2015 y 2017 los circuitos se identificaban mediante líneas del tipo:
+
+```text
+ Circuito   1 - SECCIONAL PRIMERA
+```
+
+#### Formato 2019
+
+En 2019 el encabezado adopta el formato:
+
+```text
+Circuito:1 - SECCIONAL PRIMERA
+```
+
+#### Justificación
+
+Fue necesario adaptar la detección y extracción del número y nombre del circuito al nuevo formato manteniendo la misma información de salida.
+
+
+
+### 4. Cambio en el resumen de circuito
+
+#### Formato anterior
+
+Los documentos anteriores utilizaban:
+
+```text
+Resúmen del Circuito
+```
+
+#### Formato 2019
+
+El documento utiliza:
+
+```text
+Resumen del Circuito:
+```
+
+#### Justificación
+
+Se adaptó la condición utilizada para detectar el final del bloque correspondiente a cada circuito.
+
+
+### 5. Conservación del campo establecimiento
+
+Al igual que en el parser desarrollado para 2015, el establecimiento continúa almacenándose como un único campo de texto, preservando íntegramente la información presente en la Carta Marina.
+
+No se intenta separar durante la extracción:
+
+- nombre del establecimiento;
+- dirección;
+- barrio;
+- localidad.
+
+Esta normalización se realiza posteriormente sobre el archivo CSV.
+
+#### Justificación
+
+Las diferencias de formato entre establecimientos hacen que una separación temprana incremente la complejidad del parser y pueda provocar pérdida de información.
+
+
+## Validación
+
+El resultado obtenido coincide exactamente con el resumen oficial de la Carta Marina 2019:
+
+| Concepto | Carta Marina | Parser |
+|----------|-------------:|-------:|
+| Establecimientos | 1.211 | 1.211 |
+| Mesas | 8.649 | 8.649 |
+| Electores | 2.884.358 | 2.884.358 |
+
+Durante el procesamiento se detectaron cinco discontinuidades en la numeración de mesas. Estas corresponden a registros que aparecen fuera de secuencia dentro del documento y no implican pérdida de información.
+
+En consecuencia, el parser recupera la totalidad de la información contenida en la Carta Marina 2019.
+
+
+
+## Conclusión
+
+La Carta Marina 2019 representa el primer cambio significativo de formato dentro de la serie analizada.
+
+A diferencia de la transición entre 2015 y 2017, que requirió modificaciones mínimas, el documento de 2019 obligó a adaptar diversas reglas de detección y extracción debido a los cambios en la estructura del PDF.
+
+No obstante, fue posible conservar el mismo modelo de datos de salida y la lógica general del parser, obteniendo una extracción completa y consistente con el resumen oficial de la Carta Marina.
+
+Las adaptaciones implementadas permitieron mantener un único flujo de procesamiento para las distintas Cartas Marinas, modificando únicamente aquellos componentes dependientes del formato del documento.
+
 ---
 # Parser 2017
-
-## Repositorio de referencia
-
-Este parser se desarrolló tomando como base el trabajo realizado por **Open Data Córdoba**, disponible en el siguiente repositorio:
-
-https://github.com/OpenDataCordoba/elecciones2015/
-
-En particular, se utilizó como referencia el parser correspondiente a la extracción de la **Carta Marina 2017** incluido en dicho proyecto.
 
 ## Objetivo de esta adaptación
 
@@ -41,7 +193,6 @@ if "ELECCIONES 20" in linea:
 
 Esta modificación permite reutilizar el mismo parser para todas las Cartas Marinas comprendidas entre 2015 y 2023 sin depender del año específico indicado en el encabezado.
 
----
 
 ## Validación
 
@@ -60,17 +211,10 @@ Durante el procesamiento se detectaron cinco discontinuidades en la numeración 
 Las adaptaciones incorporadas durante el desarrollo del parser para la Carta Marina 2015 resultaron suficientes para procesar correctamente la Carta Marina 2017.
 
 La única modificación necesaria consistió en generalizar la detección del encabezado correspondiente al año de la elección, confirmando que el algoritmo puede reutilizarse entre distintas Cartas Marinas con cambios mínimos.
+
+---
 # Parser 2015
 
-## Repositorio de referencia
-
-Este parser se desarrolló tomando como base el trabajo realizado por **Open Data Córdoba**, disponible en el siguiente repositorio:
-
-[OpenDataCordoba/elecciones2015/](https://github.com/OpenDataCordoba/elecciones2015/)
-
-En particular, se utilizó como referencia el parser correspondiente a la extracción de la **Carta Marina 2015** incluido en dicho proyecto.
-
-Este trabajo no busca reemplazar el repositorio original, sino comprender su funcionamiento, reproducir su lógica y documentar las modificaciones necesarias para adaptarlo a un entorno moderno de desarrollo.
 
 ## Objetivo de esta adaptación
 
@@ -87,7 +231,7 @@ Este parser fue desarrollado tomando como base el repositorio original de la Car
 
 El objetivo no fue reescribir el algoritmo, sino reproducir su funcionamiento realizando únicamente las modificaciones necesarias para adaptarlo a Python 3, corregir incompatibilidades detectadas durante la ejecución en Google Colab y resolver particularidades presentes en la Carta Marina 2015.
 
----
+
 
 ## 1. Separación de líneas
 
@@ -111,7 +255,7 @@ lines = raw.splitlines()
 
 `splitlines()` interpreta correctamente los distintos caracteres de fin de línea generados por `pdftotext`, incluyendo los saltos de página (`\f`), evitando líneas residuales sin modificar el contenido del documento.
 
----
+
 
 ## 2. Validación de continuidad de mesas
 
@@ -135,7 +279,6 @@ Durante el procesamiento de la Carta Marina 2015 se detectaron excepciones legí
 
 Registrar estas situaciones permite completar la extracción sin perder la información necesaria para su validación posterior.
 
----
 
 ## 3. Manejo de saltos de página entre circuitos
 
@@ -169,7 +312,7 @@ Resúmen del Circuito
 
 Esta modificación permite atravesar correctamente los saltos de página sin perder registros.
 
----
+
 
 ## 4. Reconstrucción del establecimiento
 
@@ -202,7 +345,7 @@ El README del repositorio original ya advierte que las direcciones presentan inc
 
 Esta adaptación automatiza uno de esos casos sin modificar la estructura general del parser.
 
----
+
 
 ## Resultado
 
