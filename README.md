@@ -1,6 +1,10 @@
 # carta-marina-cordoba
 
-Proyecto para la extracción, procesamiento y análisis de datos de las Cartas Marinas de Córdoba (2013–2023).
+Proyecto para la extracción y procesamiento de datos de las Cartas Marinas de Córdoba correspondientes a las elecciones provinciales de 2013, 2015, 2017, 2019 y 2023.
+
+El objetivo es transformar los documentos originales en archivos CSV estructurados y comparables entre elecciones, preservando la información contenida en cada Carta Marina.
+
+Los archivos generados pueden utilizarse posteriormente como entrada para otras etapas de procesamiento, como normalización de domicilios, geolocalización o análisis espacial.
 
 ## Origen del proyecto
 
@@ -196,12 +200,6 @@ El resultado obtenido coincide con el resumen oficial de la Carta Marina 2013:
 
 La coincidencia de los totales permite validar que las particularidades de formato detectadas no provocaron pérdida de registros durante la extracción.
 
-## Conclusión
-
-La Carta Marina 2013 presenta una estructura diferente de la utilizada en los documentos posteriores, principalmente en la identificación de secciones y circuitos y en la disposición de las columnas.
-
-Las adaptaciones realizadas permiten conservar el mismo modelo de datos de salida utilizado para el resto del proyecto sin depender de listas predefinidas de secciones o circuitos.
-
 ---
 
 # Parser 2015
@@ -327,16 +325,6 @@ El README del repositorio original ya advierte que las direcciones presentan inc
 
 Esta adaptación automatiza uno de esos casos sin modificar la estructura general del parser.
 
-## Resultado
-
-El parser mantiene la estructura general del algoritmo original, introduciendo únicamente las modificaciones necesarias para:
-
-- Ejecutarse correctamente en Python 3.
-- Funcionar en un entorno moderno como Google Colab.
-- Procesar correctamente las particularidades detectadas en la Carta Marina 2015 sin intervención manual durante la extracción.
-
-Las tareas de limpieza y normalización de los datos se realizan en una etapa posterior, preservando el parser como un proceso dedicado exclusivamente a la extracción de información.
-
 ---
 
 # Parser 2017
@@ -380,12 +368,6 @@ El resultado obtenido coincide exactamente con el resumen oficial de la Carta Ma
 | Electores | 2.884.358 | 2.884.358 |
 
 Durante el procesamiento se detectaron cinco discontinuidades en la numeración de mesas. Al igual que en 2015, estas corresponden a registros que aparecen fuera de secuencia dentro del documento y no implican pérdida de información.
-
-## Conclusión
-
-Las adaptaciones incorporadas durante el desarrollo del parser para la Carta Marina 2015 resultaron suficientes para procesar correctamente la Carta Marina 2017.
-
-La única modificación necesaria consistió en generalizar la detección del encabezado correspondiente al año de la elección, confirmando que el algoritmo puede reutilizarse entre distintas Cartas Marinas con cambios mínimos.
 
 ---
 
@@ -440,7 +422,7 @@ Esta condición evita depender del año específico indicado en el encabezado y 
 En 2015 y 2017 los circuitos se identificaban mediante líneas del tipo:
 
 ```text
- Circuito   1 - SECCIONAL PRIMERA
+Circuito   1 - SECCIONAL PRIMERA
 ```
 
 #### Formato 2019
@@ -492,7 +474,7 @@ No se intenta separar durante la extracción:
 - barrio;
 - localidad.
 
-Esta normalización se realiza posteriormente sobre el archivo CSV.
+Las tareas posteriores de normalización o geolocalización se realizan de manera independiente sobre los archivos CSV generados.
 
 #### Justificación
 
@@ -510,12 +492,219 @@ El resultado obtenido coincide exactamente con el resumen oficial de la Carta Ma
 
 Durante el procesamiento se detectaron cinco discontinuidades en la numeración de mesas. Estas corresponden a registros que aparecen fuera de secuencia dentro del documento y no implican pérdida de información.
 
-En consecuencia, el parser recupera la totalidad de la información contenida en la Carta Marina 2019.
+---
 
-## Conclusión
+# Parser 2023
 
-La Carta Marina 2019 representa el primer cambio significativo de formato dentro de la serie analizada.
+## Objetivo de esta adaptación
 
-A diferencia de la transición entre 2015 y 2017, que requirió modificaciones mínimas, el documento de 2019 obligó a adaptar diversas reglas de detección y extracción debido a los cambios en la estructura del PDF.
+La Carta Marina 2023 presenta un nuevo cambio de formato respecto de la edición de 2019.
 
-No obstante, fue posible conservar el mismo modelo de datos de salida y la lógica general del parser, obteniendo una extracción completa y consistente con el resumen oficial de la Carta Marina.
+Si bien se mantiene la información general de secciones, circuitos, establecimientos, mesas y electores, la disposición del documento cambia lo suficiente como para requerir una nueva lógica de extracción.
+
+El objetivo de esta adaptación fue reconstruir esa información manteniendo el mismo modelo de datos utilizado en los años anteriores y preservando el contenido original de los establecimientos.
+
+## Diferencias respecto del parser 2019
+
+### 1. Cambio en la estructura de los establecimientos
+
+En la Carta Marina 2023 los establecimientos ya no pueden procesarse suponiendo que toda su información se encuentra contenida en una única línea.
+
+Un registro puede ocupar varias líneas dependiendo de la extensión del nombre y domicilio del establecimiento.
+
+El rango de mesas, el tipo de mesa y la cantidad de electores permiten identificar el comienzo de cada registro.
+
+#### Adaptación
+
+El parser identifica el comienzo de un establecimiento mediante una expresión regular que reconoce:
+
+- mesa inicial;
+- mesa final;
+- tipo de mesa;
+- cantidad de electores.
+
+El texto anterior al rango se considera el comienzo del campo `escuela`.
+
+Las líneas posteriores que no representan un nuevo establecimiento, circuito, sección o encabezado se agregan al establecimiento actualmente en procesamiento.
+
+#### Justificación
+
+Este enfoque evita depender de una cantidad fija de líneas por establecimiento y permite reconstruir registros de longitud variable.
+
+### 2. Reconstrucción de establecimientos multilínea
+
+Para reconstruir los establecimientos se utiliza una variable temporal:
+
+```python
+escuela_actual
+```
+
+Cuando el parser encuentra un nuevo rango de mesas, el establecimiento anterior se guarda en la lista de resultados y comienza un nuevo registro.
+
+Si una línea no inicia un nuevo establecimiento, su contenido se agrega a `escuela_actual`.
+
+Al finalizar el archivo también se guarda explícitamente el último establecimiento procesado.
+
+### 3. Detección de secciones
+
+La Carta Marina 2023 identifica el comienzo de una nueva sección después del resumen correspondiente a la sección anterior.
+
+El parser utiliza una variable de estado:
+
+```python
+esperando_seccion
+```
+
+Al detectar:
+
+```text
+Resumen Sección
+```
+
+el parser queda a la espera del siguiente encabezado válido con estructura:
+
+```text
+número - nombre
+```
+
+A partir de esa línea se actualizan `seccion_nro` y `seccion_name`.
+
+Este mecanismo permite diferenciar los encabezados de sección de los correspondientes a los circuitos.
+
+### 4. Detección de circuitos
+
+Los circuitos aparecen mediante estructuras del tipo:
+
+```text
+1 - SECCIONAL PRIMERA
+2 - SECCIONAL SEGUNDA
+4 - NUEVA CORDOBA
+40A - MENDIOLAZA
+```
+
+Por este motivo se utiliza una expresión regular que admite tanto circuitos numéricos como alfanuméricos:
+
+```python
+r"^(\d+[A-Z]?)\s*-\s*(.+)$"
+```
+
+El número y nombre detectados se conservan como contexto y se asignan posteriormente a cada establecimiento.
+
+### 5. Tipos de mesa
+
+Durante el procesamiento se identificaron distintas formas de indicar el tipo de mesa:
+
+```text
+Mixto
+Ext Mixto
+Extr y Nac. Mixtos
+```
+
+En algunos registros correspondientes a `Extr y Nac.`, la palabra `Mixtos` aparece separada en la línea siguiente.
+
+Por este motivo, el parser reconoce esta estructura y normaliza el valor almacenado como:
+
+```text
+Extr y Nac. Mixtos
+```
+
+La línea independiente que contiene únicamente `Mixtos` se ignora posteriormente para evitar incorporarla al campo `escuela`.
+
+### 6. Conservación del campo escuela
+
+Al igual que en las versiones anteriores, el nombre del establecimiento y su domicilio se conservan dentro de un único campo:
+
+```text
+escuela
+```
+
+No se intenta separar durante esta etapa:
+
+- nombre del establecimiento;
+- dirección;
+- barrio;
+- localidad.
+
+Esta decisión permite preservar el contenido extraído de la Carta Marina y evita incorporar reglas de normalización dentro del parser.
+
+Las tareas posteriores de normalización de domicilios o geolocalización se realizan de manera independiente sobre los archivos CSV generados.
+
+## Correcciones de inconsistencias de la fuente
+
+Durante la validación se detectaron cinco rangos de mesas cuya extensión resultaba incompatible con la numeración de los establecimientos vecinos y con los resúmenes de los respectivos circuitos.
+
+Los valores extraídos directamente del documento fueron:
+
+| Circuito | Establecimiento | Rango en la fuente | Cantidad resultante |
+|----------|-----------------|-------------------:|-------------------:|
+| 183 | ESC GRAL NAPOLEON URIBURU | 6152–6227 | 76 |
+| 194 | ESC-JUAN B ALBERDI | 6256–6600 | 345 |
+| 245 | IPEM N° 55 | 6967–7073 | 107 |
+| 361 | ESC.J.M.ESTRADA | 8722–8746 | 25 |
+| 364 | ESC.PROV.F.N.LAPRIDA | 8729–8744 | 16 |
+
+El análisis de la continuidad de las mesas, los establecimientos vecinos y los resúmenes de circuito permitió identificar estos rangos como inconsistencias del documento fuente.
+
+Para mantener separada la extracción de las correcciones, el parser primero conserva los valores obtenidos del documento y posteriormente aplica las siguientes modificaciones:
+
+| Circuito | Rango extraído | Rango corregido |
+|----------|---------------:|----------------:|
+| 183 | 6152–6227 | 6220–6227 |
+| 194 | 6256–6600 | 6599–6600 |
+| 245 | 6967–7073 | 7066–7073 |
+| 361 | 8722–8746 | 8722–8729 |
+| 364 | 8729–8744 | 8738–8744 |
+
+Las correcciones modifican únicamente los campos `desde`, `hasta` y `cant_mesas`. El resto de la información extraída del documento se conserva sin modificaciones.
+
+## Validación
+
+Después de aplicar las correcciones se obtienen:
+
+| Concepto | Resultado |
+|----------|----------:|
+| Establecimientos | 1.586 |
+| Mesas contabilizadas | 9.057 |
+| Mesas únicas | 9.056 |
+| Electores | 3.051.544 |
+| Mesa máxima | 9.060 |
+
+No se detectaron registros completamente duplicados en el DataFrame final.
+
+### Mesa duplicada
+
+Permanece duplicado el número de mesa:
+
+```text
+4547
+```
+
+La duplicación corresponde a dos registros del mismo establecimiento, `IPEM N°172 JOSE HERNANDEZ`, dentro del circuito `88 - TIO PUJIO`.
+
+Uno corresponde al rango ordinario:
+
+```text
+4544 - 4549    Mixto
+```
+
+y el otro a un registro específico:
+
+```text
+4547 - 4547    Extr y Nac. Mixtos
+```
+
+Ambos registros se conservan en el dataset debido a que representan categorías diferentes de mesas presentes en la fuente.
+
+### Mesas faltantes
+
+Luego de las correcciones permanecen ausentes de los rangos extraídos los siguientes números de mesa:
+
+```text
+6152
+6256
+6967
+8746
+```
+
+Estas diferencias se conservan y documentan en lugar de introducir nuevas correcciones que no puedan justificarse directamente a partir de la estructura del documento.
+
